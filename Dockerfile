@@ -8,7 +8,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/fb_comment .
 
-FROM mcr.microsoft/playwright:v1.55.0-jammy
+FROM mcr.microsoft.com/playwright:v1.55.0-jammy
 
 ENV APP_PORT=8080 \
     SCRAPER_HEADLESS=true \
