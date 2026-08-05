@@ -4,23 +4,27 @@ WORKDIR /src
 
 COPY go.mod go.sum ./
 RUN go mod download
+RUN go install github.com/mxschmitt/playwright-go/cmd/playwright@v0.6100.0
 
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/fb_comment .
 
-FROM mcr.microsoft.com/playwright:v1.55.0-jammy
+FROM mcr.microsoft.com/playwright:v1.61.1-jammy
 
 ENV APP_PORT=8080 \
     SCRAPER_HEADLESS=true \
-    GIN_MODE=release
+    GIN_MODE=release \
+    HOME=/home/pwuser
 
 WORKDIR /home/pwuser/app
 
 COPY --from=builder /out/fb_comment ./fb_comment
 COPY --from=builder /src/view ./view
-
-EXPOSE 8080
+COPY --from=builder /go/bin/playwright /usr/local/bin/playwright
 
 USER pwuser
+RUN playwright install chromium
+
+EXPOSE 8080
 
 CMD ["/home/pwuser/app/fb_comment"]
