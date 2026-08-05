@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý resource</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f3f4f6; margin: 0; }
+        .app { min-height: 100vh; display: flex; }
+        .sidebar { position: sticky; top: 0; width: 240px; height: 100vh; padding: 24px 16px; box-sizing: border-box; color: #fff; background: #111827; }
+        .brand { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+        .brand-sub { color: #9ca3af; font-size: 13px; margin-bottom: 24px; }
+        .side-nav a, .side-nav button { display: block; width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 11px 12px; border: 0; border-radius: 10px; color: #d1d5db; background: transparent; text-align: left; text-decoration: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .side-nav a:hover, .side-nav button:hover, .side-nav .active { color: #fff; background: #2563eb; }
+        .side-nav form { margin: 16px 0 0; }
+        .content { flex: 1; min-width: 0; padding: 32px; }
+        .container { max-width: 1280px; margin: 40px auto; background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+        h1, h2 { margin-top: 0; }
+        label { display: block; margin: 12px 0 6px; font-weight: 600; }
+        input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; }
+        textarea { min-height: 140px; font-family: Arial, sans-serif; }
+        button, .button { display: inline-block; padding: 9px 13px; border: 0; border-radius: 8px; color: #fff; background: #2563eb; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .danger { background: #dc2626; }
+        .secondary { background: #6b7280; }
+        .success { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #166534; background: #dcfce7; }
+        .error { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #991b1b; background: #fee2e2; }
+        .muted { color: #6b7280; }
+        .grid { display: grid; grid-template-columns: 180px 180px 220px 1fr auto; gap: 12px; align-items: end; margin: 18px 0 28px; }
+        .import-grid { display: grid; grid-template-columns: 180px 220px 1fr; gap: 12px; align-items: start; margin: 18px 0 28px; }
+        .delete-grid { display: grid; grid-template-columns: 180px 180px 220px auto; gap: 12px; align-items: end; margin: 18px 0 28px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+        th { background: #f9fafb; }
+        .value, .error-text { max-width: 360px; overflow-wrap: anywhere; }
+        .pill { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #e5e7eb; color: #374151; }
+        .pill.active { background: #dcfce7; color: #166534; }
+        .pill.inactive { background: #e5e7eb; color: #374151; }
+        .pill.used { background: #fef3c7; color: #92400e; }
+        .pill.error { background: #fee2e2; color: #991b1b; margin: 0; }
+        .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .actions form { margin: 0; }
+        .bulk-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; }
+        .bulk-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .bulk-meta { color: #6b7280; font-size: 13px; }
+        .checkbox-col { width: 40px; text-align: center; }
+        input[type="checkbox"] { width: auto; }
+        .pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding: 12px 0; }
+        .pager-actions { display: flex; gap: 8px; }
+        @media (max-width: 900px) { .app { display: block; } .sidebar { position: static; width: auto; height: auto; } .grid, .import-grid, .delete-grid { grid-template-columns: 1fr; } .bulk-bar { flex-direction: column; align-items: stretch; } .container { margin: 16px 0; } .content { padding: 16px; } }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">fb_comment</div>
+        <div class="brand-sub">Facebook comment tracker</div>
+        <nav class="side-nav">
+            <a href="/comments">Comments</a>
+            <a href="/links?active=true">Links</a>
+            <a href="/users">Users</a>
+            <a href="/resources" class="active">Resources</a>
+            <form method="post" action="/logout">
+                <button type="submit">Logout</button>
+            </form>
+        </nav>
+    </aside>
+    <main class="content">
+        <div class="container">
+            <h1>Quản lý resource</h1>
+            <p class="muted">Quản lý token, proxy, cookie theo từng user. Giá trị nhạy cảm chỉ hiển thị dạng masked.</p>
+
+            {{if .success}}<div class="success">Thao tác thành công: {{.success}}</div>{{end}}
+            {{if .error}}<div class="error">{{.error}}</div>{{end}}
+
+            <h2>Filter</h2>
+            <form method="get" action="/resources" class="grid">
+                <div>
+                    <label for="filter_type">Type</label>
+                    <select id="filter_type" name="type">
+                        <option value="">all</option>
+                        {{range .types}}<option value="{{.}}" {{if eq $.filterType .}}selected{{end}}>{{.}}</option>{{end}}
+                    </select>
+                </div>
+                <div>
+                    <label for="filter_status">Status</label>
+                    <select id="filter_status" name="status">
+                        <option value="">all</option>
+                        {{range .statuses}}<option value="{{.}}" {{if eq $.filterStatus .}}selected{{end}}>{{.}}</option>{{end}}
+                    </select>
+                </div>
+                {{if .isAdmin}}
+                <div>
+                    <label for="filter_user_id">User</label>
+                    <select id="filter_user_id" name="user_id">
+                        <option value="">all</option>
+                        {{range .users}}<option value="{{.ID}}" {{if eq $.filterUserID (printf "%d" .ID)}}selected{{end}}>{{.Username}}</option>{{end}}
+                    </select>
+                </div>
+                {{else}}
+                <div></div>
+                {{end}}
+                <div>
+                    <label for="per_page">Per page</label>
+                    <input id="per_page" name="per_page" type="number" min="1" max="500" value="{{.pagination.PerPage}}">
+                </div>
+                <button type="submit">Lọc</button>
+            </form>
+
+            <h2>Nhập resource</h2>
+            <form method="post" action="/resources/import" class="import-grid">
+                <div>
+                    <label for="type">Type</label>
+                    <select id="type" name="type" required>
+                        {{range .types}}<option value="{{.}}">{{.}}</option>{{end}}
+                    </select>
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        {{range .statuses}}<option value="{{.}}" {{if eq . "active"}}selected{{end}}>{{.}}</option>{{end}}
+                    </select>
+                    {{if .isAdmin}}
+                    <label for="user_id">Cấp cho user</label>
+                    <select id="user_id" name="user_id">
+                        <option value="">current admin</option>
+                        {{range .users}}<option value="{{.ID}}">{{.Username}}</option>{{end}}
+                    </select>
+                    {{end}}
+                </div>
+                <div class="muted" style="padding-top:36px;">Nhập đúng 1 token/proxy/cookie cho user đã chọn. Mỗi lần submit chỉ tạo 1 resource.</div>
+                <div>
+                    <label for="value">Value</label>
+                    <input id="value" name="value" placeholder="token/proxy/cookie" required>
+                    <button type="submit" style="margin-top:12px;">Import</button>
+                </div>
+            </form>
+
+            <h2>Xóa theo status</h2>
+            <form method="post" action="/resources/delete-by-status" class="delete-grid" onsubmit="return confirm('Xóa resource theo status đã chọn?')">
+                <div>
+                    <label for="delete_status">Status</label>
+                    <select id="delete_status" name="status" required>
+                        {{range .statuses}}<option value="{{.}}">{{.}}</option>{{end}}
+                    </select>
+                </div>
+                <div>
+                    <label for="delete_type">Type</label>
+                    <select id="delete_type" name="type">
+                        <option value="">all</option>
+                        {{range .types}}<option value="{{.}}">{{.}}</option>{{end}}
+                    </select>
+                </div>
+                {{if .isAdmin}}
+                <div>
+                    <label for="delete_user_id">User</label>
+                    <select id="delete_user_id" name="user_id">
+                        <option value="">all</option>
+                        {{range .users}}<option value="{{.ID}}">{{.Username}}</option>{{end}}
+                    </select>
+                </div>
+                {{else}}
+                <div></div>
+                {{end}}
+                <div>
+                    <input type="hidden" name="confirm" value="true">
+                    <button class="danger" type="submit">Xóa</button>
+                </div>
+            </form>
+
+            <h2>Danh sách resource</h2>
+            <form method="post" action="/resources-bulk-delete" id="bulkDeleteResourcesForm">
+                <div class="bulk-bar">
+                    <div>
+                        <div><strong id="selectedCount">0</strong>/<span id="totalCount">0</span> resource đang được chọn</div>
+                        <div class="bulk-meta">Chọn nhanh resource trong trang hiện tại để xóa. Resource active sẽ cần xác nhận thêm.</div>
+                    </div>
+                    <div class="bulk-actions">
+                        <button type="button" id="selectPage" class="secondary">Chọn cả trang này</button>
+                        <button type="button" id="clearSelection" class="secondary">Bỏ chọn</button>
+                        <button class="danger" type="submit">Xóa đã chọn</button>
+                    </div>
+                </div>
+                <div id="bulkDeleteInputs"></div>
+            </form>
+            <table>
+                <thead>
+                <tr>
+                    <th class="checkbox-col"><input id="selectAll" type="checkbox" aria-label="Chọn tất cả"></th>
+                    <th>ID</th>
+                    {{if .isAdmin}}<th>Owner</th>{{end}}
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Value</th>
+                    <th>Last used</th>
+                    <th>Last error</th>
+                    <th>Created at</th>
+                    <th>Hành động</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{range .resources}}
+                <tr>
+                    <td class="checkbox-col"><input class="row-checkbox" type="checkbox" value="{{.ID}}" data-status="{{.Status}}" aria-label="Chọn resource {{.ID}}"></td>
+                    <td>{{.ID}}</td>
+                    {{if $.isAdmin}}<td>{{if .OwnerUsername}}{{.OwnerUsername}}{{else}}<span class="muted">unassigned</span>{{end}}</td>{{end}}
+                    <td><span class="pill">{{.Type}}</span></td>
+                    <td><span class="pill {{.Status}}">{{.Status}}</span></td>
+                    <td class="value">{{.ValueMasked}} <span class="muted">({{.ValueLength}} chars)</span></td>
+                    <td>{{if .LastUsedAt}}{{.LastUsedAt.Format "2006-01-02 15:04:05"}}{{else}}<span class="muted">Chưa dùng</span>{{end}}</td>
+                    <td class="error-text">{{.LastError}}</td>
+                    <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
+                    <td class="actions">
+                        <a class="button secondary" href="/resources/{{.ID}}/edit">Sửa</a>
+                        <form method="post" action="/resources/{{.ID}}/delete" onsubmit="return confirm('Xóa resource này?')">
+                            <button class="danger" type="submit">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+                {{else}}
+                <tr><td colspan="{{if $.isAdmin}}10{{else}}9{{end}}" class="muted">Chưa có resource nào.</td></tr>
+                {{end}}
+                </tbody>
+            </table>
+            <div class="pager">
+                <div class="muted">Trang {{.pagination.Page}} / {{.pagination.TotalPages}} · Tổng: {{.pagination.Total}}</div>
+                <div class="pager-actions">
+                    {{if .prevPageURL}}<a class="button secondary" href="{{.prevPageURL}}">Trước</a>{{else}}<span class="button secondary" style="opacity:.5; cursor:not-allowed;">Trước</span>{{end}}
+                    {{if .nextPageURL}}<a class="button secondary" href="{{.nextPageURL}}">Sau</a>{{else}}<span class="button secondary" style="opacity:.5; cursor:not-allowed;">Sau</span>{{end}}
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+const bulkDeleteResourcesForm = document.getElementById('bulkDeleteResourcesForm');
+const selectAll = document.getElementById('selectAll');
+const selectPage = document.getElementById('selectPage');
+const clearSelection = document.getElementById('clearSelection');
+const selectedCount = document.getElementById('selectedCount');
+const totalCount = document.getElementById('totalCount');
+const bulkDeleteInputs = document.getElementById('bulkDeleteInputs');
+const rowCheckboxes = Array.from(document.querySelectorAll('.row-checkbox'));
+
+function updateSelectionState() {
+    const checkedCount = rowCheckboxes.filter((checkbox) => checkbox.checked).length;
+    selectedCount.textContent = String(checkedCount);
+    totalCount.textContent = String(rowCheckboxes.length);
+    if (selectAll) {
+        selectAll.checked = checkedCount > 0 && checkedCount === rowCheckboxes.length;
+        selectAll.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
+    }
+}
+
+if (selectAll) {
+    selectAll.addEventListener('change', () => {
+        rowCheckboxes.forEach((checkbox) => { checkbox.checked = selectAll.checked; });
+        updateSelectionState();
+    });
+}
+
+if (selectPage) {
+    selectPage.addEventListener('click', () => {
+        rowCheckboxes.forEach((checkbox) => { checkbox.checked = true; });
+        updateSelectionState();
+    });
+}
+
+if (clearSelection) {
+    clearSelection.addEventListener('click', () => {
+        rowCheckboxes.forEach((checkbox) => { checkbox.checked = false; });
+        updateSelectionState();
+    });
+}
+
+rowCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', updateSelectionState));
+
+if (bulkDeleteResourcesForm) {
+    bulkDeleteResourcesForm.addEventListener('submit', (event) => {
+        const checkedBoxes = rowCheckboxes.filter((checkbox) => checkbox.checked);
+        if (!checkedBoxes.length) {
+            event.preventDefault();
+            window.alert('Vui lòng chọn ít nhất 1 resource.');
+            return;
+        }
+        const hasActive = checkedBoxes.some((checkbox) => checkbox.dataset.status === 'active');
+        const confirmMessage = hasActive
+            ? 'Có resource active trong danh sách. Xóa các resource đã chọn?'
+            : 'Xóa các resource đã chọn?';
+        if (!window.confirm(confirmMessage)) {
+            event.preventDefault();
+            return;
+        }
+        const inputs = checkedBoxes
+            .map((checkbox) => `<input type="hidden" name="ids" value="${checkbox.value}">`);
+        if (hasActive) {
+            inputs.push('<input type="hidden" name="confirm" value="true">');
+        }
+        bulkDeleteInputs.innerHTML = inputs.join('');
+    });
+}
+
+updateSelectionState();
+</script>
+</body>
+</html>

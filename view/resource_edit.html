@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sửa resource</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f3f4f6; margin: 0; }
+        .app { min-height: 100vh; display: flex; }
+        .sidebar { position: sticky; top: 0; width: 240px; height: 100vh; padding: 24px 16px; box-sizing: border-box; color: #fff; background: #111827; }
+        .brand { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+        .brand-sub { color: #9ca3af; font-size: 13px; margin-bottom: 24px; }
+        .side-nav a, .side-nav button { display: block; width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 11px 12px; border: 0; border-radius: 10px; color: #d1d5db; background: transparent; text-align: left; text-decoration: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .side-nav a:hover, .side-nav button:hover, .side-nav .active { color: #fff; background: #2563eb; }
+        .side-nav form { margin: 16px 0 0; }
+        .content { flex: 1; min-width: 0; padding: 32px; }
+        .container { max-width: 760px; margin: 40px auto; background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+        h1 { margin-top: 0; }
+        label { display: block; margin: 14px 0 6px; font-weight: 600; }
+        input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; }
+        textarea { min-height: 110px; font-family: Arial, sans-serif; }
+        button, .button { display: inline-block; padding: 9px 13px; border: 0; border-radius: 8px; color: #fff; background: #2563eb; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .secondary { background: #6b7280; }
+        .error { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #991b1b; background: #fee2e2; }
+        .muted { color: #6b7280; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+        .masked { padding: 10px 12px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; overflow-wrap: anywhere; }
+        @media (max-width: 900px) { .app { display: block; } .sidebar { position: static; width: auto; height: auto; } .container { margin: 16px 0; } .content { padding: 16px; } }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">fb_comment</div>
+        <div class="brand-sub">Facebook comment tracker</div>
+        <nav class="side-nav">
+            <a href="/comments">Comments</a>
+            <a href="/links?active=true">Links</a>
+            <a href="/users">Users</a>
+            <a href="/resources" class="active">Resources</a>
+            <form method="post" action="/logout">
+                <button type="submit">Logout</button>
+            </form>
+        </nav>
+    </aside>
+    <main class="content">
+        <div class="container">
+            <h1>Sửa resource #{{.resource.ID}}</h1>
+            {{if .error}}<div class="error">{{.error}}</div>{{end}}
+
+            <form method="post" action="/resources/{{.resource.ID}}">
+                {{if .isAdmin}}
+                <label for="user_id">Owner</label>
+                <select id="user_id" name="user_id">
+                    {{range .users}}<option value="{{.ID}}" {{if eq $.assignedUserID (printf "%d" .ID)}}selected{{end}}>{{.Username}}</option>{{end}}
+                </select>
+                {{end}}
+
+                <label for="type">Type</label>
+                <select id="type" name="type" required>
+                    {{range .types}}<option value="{{.}}" {{if eq $.resource.Type .}}selected{{end}}>{{.}}</option>{{end}}
+                </select>
+
+                <label for="status">Status</label>
+                <select id="status" name="status" required>
+                    {{range .statuses}}<option value="{{.}}" {{if eq $.resource.Status .}}selected{{end}}>{{.}}</option>{{end}}
+                </select>
+
+                <label>Value hiện tại</label>
+                <div class="masked">{{.resource.ValueMasked}} <span class="muted">({{.resource.ValueLength}} chars)</span></div>
+
+                <label for="value">Replace value</label>
+                <input id="value" name="value" placeholder="Để trống nếu muốn giữ nguyên value hiện tại">
+                <p class="muted">Không hiển thị raw token/proxy/cookie hiện tại để tránh lộ dữ liệu nhạy cảm. Không nhập xuống dòng.</p>
+
+                <div class="actions">
+                    <button type="submit">Lưu</button>
+                    <a class="button secondary" href="/resources">Quay lại</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

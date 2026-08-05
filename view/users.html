@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>User</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f3f4f6; margin: 0; }
+        .app { min-height: 100vh; display: flex; }
+        .sidebar { position: sticky; top: 0; width: 240px; height: 100vh; padding: 24px 16px; box-sizing: border-box; color: #fff; background: #111827; }
+        .brand { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+        .brand-sub { color: #9ca3af; font-size: 13px; margin-bottom: 24px; }
+        .side-nav a, .side-nav button { display: block; width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 11px 12px; border: 0; border-radius: 10px; color: #d1d5db; background: transparent; text-align: left; text-decoration: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .side-nav a:hover, .side-nav button:hover, .side-nav .active { color: #fff; background: #2563eb; }
+        .side-nav form { margin: 16px 0 0; }
+        .content { flex: 1; min-width: 0; padding: 32px; }
+        .container { max-width: 1040px; margin: 40px auto; background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+        h1, h2 { margin-top: 0; }
+        label { display: block; margin: 12px 0 6px; font-weight: 600; }
+        input, select { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; }
+        button, .button { display: inline-block; padding: 9px 13px; border: 0; border-radius: 8px; color: #fff; background: #2563eb; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .danger { background: #dc2626; }
+        .secondary { background: #6b7280; }
+        .success { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #166534; background: #dcfce7; }
+        .error { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #991b1b; background: #fee2e2; }
+        .muted { color: #6b7280; }
+        .page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+        .page-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .admin-panel { margin: 24px 0 28px; padding: 18px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb; }
+        .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: end; }
+        .form-actions { display: flex; align-items: end; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: middle; }
+        th { background: #f9fafb; }
+        .pill { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #e5e7eb; color: #374151; }
+        .pill.admin { background: #dbeafe; color: #1e40af; }
+        .pill.user { background: #e5e7eb; color: #374151; }
+        .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .actions form { margin: 0; }
+        .bulk-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; }
+        .bulk-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .bulk-meta { color: #6b7280; font-size: 13px; }
+        .checkbox-col { width: 40px; text-align: center; }
+        input[type="checkbox"] { width: auto; }
+        .pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding: 12px 0; }
+        .pager-actions { display: flex; gap: 8px; }
+        @media (max-width: 900px) { .app { display: block; } .sidebar { position: static; width: auto; height: auto; } .page-head { display: block; } .page-actions { justify-content: flex-start; margin-top: 12px; } .form-grid { grid-template-columns: 1fr; } .bulk-bar { flex-direction: column; align-items: stretch; } .container { margin: 16px 0; } .content { padding: 16px; } }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">fb_comment</div>
+        <div class="brand-sub">Facebook comment tracker</div>
+        <nav class="side-nav">
+            <a href="/comments">Comments</a>
+            <a href="/links?active=true">Links</a>
+            <a href="/users" class="active">Users</a>
+            <a href="/resources">Resources</a>
+            <form method="post" action="/logout">
+                <button type="submit">Logout</button>
+            </form>
+        </nav>
+    </aside>
+    <main class="content">
+        <div class="container">
+            <div class="page-head">
+                <div>
+                    <h1>User</h1>
+                    {{if eq .currentUser.Role "admin"}}
+                    <p class="muted">Admin xem được toàn bộ user trong hệ thống.</p>
+                    {{else}}
+                    <p class="muted">Role user chỉ xem được thông tin tài khoản của chính mình.</p>
+                    {{end}}
+                </div>
+                <div class="page-actions">
+                    {{if eq .currentUser.Role "admin"}}<a class="button" href="/users/new">Thêm user</a>{{end}}
+                    <a class="button secondary" href="/password">Cập nhật mật khẩu của tôi</a>
+                </div>
+            </div>
+
+            {{if eq .success "password_updated"}}<div class="success">Cập nhật mật khẩu thành công.</div>{{else}}{{if .success}}<div class="success">Thao tác thành công: {{.success}}</div>{{end}}{{end}}
+            {{if .error}}<div class="error">{{.error}}</div>{{end}}
+
+            <h2>Danh sách user</h2>
+            <form method="get" action="/users" class="form-grid" style="grid-template-columns: 180px auto; margin-bottom: 18px;">
+                <div>
+                    <label for="per_page">Per page</label>
+                    <input id="per_page" name="per_page" type="number" min="1" max="500" value="{{.pagination.PerPage}}">
+                </div>
+                <div class="form-actions"><button type="submit">Áp dụng</button></div>
+            </form>
+            {{if eq .currentUser.Role "admin"}}
+            <form method="post" action="/users-bulk-delete" id="bulkDeleteUsersForm">
+                <div class="bulk-bar">
+                    <div>
+                        <div><strong id="selectedCount">0</strong>/<span id="totalCount">0</span> user đang được chọn</div>
+                        <div class="bulk-meta">Chọn nhanh các user trong trang hiện tại. Không thể xóa chính tài khoản đang đăng nhập hoặc admin cuối cùng.</div>
+                    </div>
+                    <div class="bulk-actions">
+                        <button type="button" id="selectPage" class="secondary">Chọn cả trang này</button>
+                        <button type="button" id="clearSelection" class="secondary">Bỏ chọn</button>
+                        <button class="danger" type="submit">Xóa đã chọn</button>
+                    </div>
+                </div>
+                <div id="bulkDeleteInputs"></div>
+            </form>
+            {{end}}
+            <table>
+                <thead>
+                <tr>
+                    {{if eq .currentUser.Role "admin"}}<th class="checkbox-col"><input id="selectAll" type="checkbox" aria-label="Chọn tất cả"></th>{{end}}
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    {{if eq .currentUser.Role "admin"}}<th>Hành động</th>{{end}}
+                </tr>
+                </thead>
+                <tbody>
+                {{range .users}}
+                <tr>
+                    {{if eq $.currentUser.Role "admin"}}<td class="checkbox-col"><input class="row-checkbox" type="checkbox" value="{{.ID}}" aria-label="Chọn user {{.ID}}" {{if eq .ID $.currentUser.ID}}disabled{{end}}></td>{{end}}
+                    <td>{{.ID}}</td>
+                    <td>{{.Username}}</td>
+                    <td><span class="pill {{.Role}}">{{.Role}}</span></td>
+                    {{if eq $.currentUser.Role "admin"}}
+                    <td>
+                        <div class="actions">
+                            <a class="button secondary" href="/users/{{.ID}}/edit">Sửa</a>
+                            <form method="post" action="/users/{{.ID}}/delete" onsubmit="return confirm('Xóa user này?')">
+                                <button class="danger" type="submit">Xóa</button>
+                            </form>
+                        </div>
+                    </td>
+                    {{end}}
+                </tr>
+                {{else}}
+                <tr><td colspan="{{if eq .currentUser.Role "admin"}}5{{else}}3{{end}}" class="muted">Chưa có user nào.</td></tr>
+                {{end}}
+                </tbody>
+            </table>
+            <div class="pager">
+                <div class="muted">Trang {{.pagination.Page}} / {{.pagination.TotalPages}} · Tổng: {{.pagination.Total}}</div>
+                <div class="pager-actions">
+                    {{if .prevPageURL}}<a class="button secondary" href="{{.prevPageURL}}">Trước</a>{{else}}<span class="button secondary" style="opacity:.5; cursor:not-allowed;">Trước</span>{{end}}
+                    {{if .nextPageURL}}<a class="button secondary" href="{{.nextPageURL}}">Sau</a>{{else}}<span class="button secondary" style="opacity:.5; cursor:not-allowed;">Sau</span>{{end}}
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{{if eq .currentUser.Role "admin"}}
+<script>
+const bulkDeleteUsersForm = document.getElementById('bulkDeleteUsersForm');
+const selectAll = document.getElementById('selectAll');
+const selectPage = document.getElementById('selectPage');
+const clearSelection = document.getElementById('clearSelection');
+const selectedCount = document.getElementById('selectedCount');
+const totalCount = document.getElementById('totalCount');
+const bulkDeleteInputs = document.getElementById('bulkDeleteInputs');
+const rowCheckboxes = Array.from(document.querySelectorAll('.row-checkbox'));
+
+function updateSelectionState() {
+    const enabledBoxes = rowCheckboxes.filter((checkbox) => !checkbox.disabled);
+    const checkedCount = enabledBoxes.filter((checkbox) => checkbox.checked).length;
+    selectedCount.textContent = String(checkedCount);
+    totalCount.textContent = String(enabledBoxes.length);
+    if (selectAll) {
+        selectAll.checked = checkedCount > 0 && checkedCount === enabledBoxes.length;
+        selectAll.indeterminate = checkedCount > 0 && checkedCount < enabledBoxes.length;
+    }
+}
+
+if (selectAll) {
+    selectAll.addEventListener('change', () => {
+        rowCheckboxes.forEach((checkbox) => {
+            if (!checkbox.disabled) checkbox.checked = selectAll.checked;
+        });
+        updateSelectionState();
+    });
+}
+
+if (selectPage) {
+    selectPage.addEventListener('click', () => {
+        rowCheckboxes.forEach((checkbox) => {
+            if (!checkbox.disabled) checkbox.checked = true;
+        });
+        updateSelectionState();
+    });
+}
+
+if (clearSelection) {
+    clearSelection.addEventListener('click', () => {
+        rowCheckboxes.forEach((checkbox) => { checkbox.checked = false; });
+        updateSelectionState();
+    });
+}
+
+rowCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', updateSelectionState));
+
+if (bulkDeleteUsersForm) {
+    bulkDeleteUsersForm.addEventListener('submit', (event) => {
+        const checkedBoxes = rowCheckboxes.filter((checkbox) => checkbox.checked && !checkbox.disabled);
+        if (!checkedBoxes.length) {
+            event.preventDefault();
+            window.alert('Vui lòng chọn ít nhất 1 user.');
+            return;
+        }
+        if (!window.confirm('Xóa các user đã chọn?')) {
+            event.preventDefault();
+            return;
+        }
+        bulkDeleteInputs.innerHTML = checkedBoxes
+            .map((checkbox) => `<input type="hidden" name="ids" value="${checkbox.value}">`)
+            .join('');
+    });
+}
+
+updateSelectionState();
+</script>
+{{end}}
+</body>
+</html>

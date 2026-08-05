@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sửa link</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f3f4f6; margin: 0; }
+        .card { width: 640px; margin: 50px auto; background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+        label { display: block; margin: 14px 0 6px; font-weight: 600; }
+        input, textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; }
+        textarea { min-height: 80px; }
+        button, .button { display: inline-block; margin-top: 20px; padding: 10px 14px; border: 0; border-radius: 8px; color: #fff; background: #2563eb; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .secondary { background: #6b7280; }
+        .error { margin-bottom: 16px; padding: 10px 12px; border-radius: 8px; color: #991b1b; background: #fee2e2; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+        .check { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+        .check input { width: auto; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Sửa link #{{.link.ID}}</h1>
+    {{if .error}}<div class="error">{{.error}}</div>{{end}}
+
+    <form method="post" action="/links/{{.link.ID}}?active={{.activeFilter}}">
+        <label for="title">Tiêu đề</label>
+        <input id="title" name="title" value="{{.link.Title}}" placeholder="Tên để dễ nhận biết">
+
+        <label for="url">URL</label>
+        <input id="url" name="url" value="{{.link.URL}}" required>
+
+        <label for="final_url">Final URL</label>
+        <input id="final_url" name="final_url" value="{{.link.FinalURL}}">
+
+        <div class="grid">
+            <div>
+                <label for="poll_interval_seconds">Chu kỳ cào (giây)</label>
+                <input id="poll_interval_seconds" name="poll_interval_seconds" type="number" min="3600" value="{{.link.PollIntervalSeconds}}">
+            </div>
+            <div>
+                <label for="max_comments">Max comments</label>
+                <input id="max_comments" name="max_comments" type="number" min="1" max="500" value="{{.link.MaxComments}}">
+            </div>
+            <div>
+                <label for="max_scrolls">Max scrolls</label>
+                <input id="max_scrolls" name="max_scrolls" type="number" min="1" max="50" value="{{.link.MaxScrolls}}">
+            </div>
+            <div>
+                <label for="idle_passes">Dừng sau N vòng không có comment mới</label>
+                <input id="idle_passes" name="idle_passes" type="number" min="1" max="10" value="{{.link.IdlePasses}}">
+            </div>
+        </div>
+
+        <label for="status">Status</label>
+        <input id="status" name="status" value="{{.link.Status}}">
+
+        <label for="last_error">Last error</label>
+        <textarea id="last_error" name="last_error">{{.link.LastError}}</textarea>
+
+        <input type="hidden" name="active_present" value="1">
+        <label class="check">
+            <input name="active" type="checkbox" {{if .link.Active}}checked{{end}}>
+            Active
+        </label>
+
+        <button type="submit">Lưu</button>
+        <a class="button secondary" href="{{.backPath}}">Quay lại</a>
+    </form>
+</div>
+</body>
+</html>

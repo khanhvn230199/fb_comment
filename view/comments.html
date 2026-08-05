@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Comments</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f3f4f6; margin: 0; }
+        .app { min-height: 100vh; display: flex; }
+        .sidebar { position: sticky; top: 0; width: 240px; height: 100vh; padding: 24px 16px; box-sizing: border-box; color: #fff; background: #111827; }
+        .brand { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+        .brand-sub { color: #9ca3af; font-size: 13px; margin-bottom: 24px; }
+        .side-nav a, .side-nav button { display: block; width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 11px 12px; border: 0; border-radius: 10px; color: #d1d5db; background: transparent; text-align: left; text-decoration: none; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .side-nav a:hover, .side-nav button:hover, .side-nav .active { color: #fff; background: #2563eb; }
+        .side-nav form { margin: 16px 0 0; }
+        .content { flex: 1; min-width: 0; padding: 32px; }
+        .container { max-width: 1440px; margin: 40px auto; background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+        h1, h2 { margin-top: 0; }
+        .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        label { display: block; margin: 12px 0 6px; font-weight: 600; }
+        input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; }
+        textarea { min-height: 110px; font-family: Arial, sans-serif; }
+        button { display: inline-block; margin-top: 12px; padding: 10px 14px; border: 0; border-radius: 8px; color: #fff; background: #2563eb; font-weight: 700; cursor: pointer; }
+        button:disabled { opacity: .65; cursor: not-allowed; }
+        .secondary { background: #6b7280; }
+        .success { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #166534; background: #dcfce7; }
+        .error { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #991b1b; background: #fee2e2; }
+        .info { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #1e3a8a; background: #dbeafe; }
+        .grid { display: grid; grid-template-columns: 1fr 160px 160px 220px; gap: 12px; align-items: end; }
+        .filter-grid { display: grid; grid-template-columns: 180px 1fr 140px auto auto; gap: 12px; align-items: end; margin-bottom: 18px; }
+        .scrape-items { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+        .scrape-item { display: grid; grid-template-columns: 220px 1fr auto; gap: 12px; align-items: end; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; }
+        .scrape-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 18px; }
+        th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+        th { background: #f9fafb; }
+        .url, .comment { max-width: 320px; overflow-wrap: anywhere; }
+        .narrow { max-width: 130px; overflow-wrap: anywhere; }
+        .title-link { color: #2563eb; font-weight: 700; text-decoration: none; }
+        .title-link:hover { text-decoration: underline; }
+        .muted { color: #6b7280; }
+        .pill { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #e5e7eb; color: #374151; }
+        .pill.ok { background: #dcfce7; color: #166534; }
+        .pill.error { background: #fee2e2; color: #991b1b; margin: 0; }
+        .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding: 12px 0; }
+        .pager-actions { display: flex; gap: 8px; }
+        .button { display: inline-block; padding: 9px 13px; border: 0; border-radius: 8px; color: #fff; background: #2563eb; font-weight: 700; cursor: pointer; text-decoration: none; }
+        @media (max-width: 900px) {
+            .app { display: block; }
+            .sidebar { position: static; width: auto; height: auto; }
+            .grid, .filter-grid { grid-template-columns: 1fr; }
+            .scrape-item { grid-template-columns: 1fr; }
+            .container { margin: 16px 0; }
+            .content { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">fb_comment</div>
+        <div class="brand-sub">Facebook comment tracker</div>
+        <nav class="side-nav">
+            <a href="/comments" class="active">Comments</a>
+            <a href="/links?active=true" class="">Links</a>
+            <a href="/users" class="">Users</a>
+            <a href="/resources" class="">Resources</a>
+            <form method="post" action="/logout">
+                <button type="submit">Logout</button>
+            </form>
+        </nav>
+    </aside>
+    <main class="content">
+<div class="container">
+    <h1>Comment Facebook</h1>
+
+    {{if .success}}<div class="success">{{.success}}</div>{{end}}
+    {{if .error}}<div class="error">{{.error}}</div>{{end}}
+    <div id="message"></div>
+
+    <h2>Cào comment từ list link</h2>
+    <p class="muted">Nhập title và Facebook link cho từng dòng. API sẽ lưu link vào bảng <code>links</code>, check trùng, cập nhật title nếu có, cào comment bằng Playwright và lưu vào bảng <code>comments</code>.</p>
+    <form id="scrapeForm">
+        <div id="scrapeItems" class="scrape-items">
+            <div class="scrape-item">
+                <div>
+                    <label>Tiêu đề</label>
+                    <input class="scrape-title" placeholder="Tên để dễ nhận biết">
+                </div>
+                <div>
+                    <label>Facebook URL</label>
+                    <input class="scrape-url" placeholder="https://www.facebook.com/..." required>
+                </div>
+                <button type="button" class="secondary remove-row">Xóa dòng</button>
+            </div>
+        </div>
+        <div class="scrape-actions">
+            <button type="button" id="addRowButton" class="secondary">Thêm dòng</button>
+        </div>
+        <div class="grid">
+            <div>
+                <label for="maxComments">Max comments</label>
+                <input id="maxComments" type="number" min="1" max="500" value="50">
+            </div>
+            <div>
+                <label for="maxScrolls">Max scrolls</label>
+                <input id="maxScrolls" type="number" min="1" max="50" value="20">
+            </div>
+            <div>
+                <label for="idlePasses">Dừng sau N vòng không có comment mới</label>
+                <input id="idlePasses" type="number" min="1" max="10" value="2">
+            </div>
+            <div>
+                <button id="scrapeButton" type="submit">Cào và lưu comment</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="summary">
+        <span class="pill">Links: <span id="linkCount">{{len .links}}</span></span>
+        <span class="pill">Comments: <span id="commentCount">{{.pagination.Total}}</span></span>
+    </div>
+
+    <h2 style="margin-top:28px;">Danh sách comment</h2>
+    <form method="get" action="/comments" class="filter-grid">
+        <div>
+            <label for="comment_date">Ngày comment</label>
+            <input id="comment_date" name="comment_date" type="date" value="{{.filterCommentDate}}">
+        </div>
+        <div>
+            <label for="link_id">Link</label>
+            <select id="link_id" name="link_id">
+                <option value="">Tất cả link</option>
+                {{range .links}}<option value="{{.ID}}" {{if eq $.filterLinkID (printf "%d" .ID)}}selected{{end}}>{{if .Title}}{{.Title}}{{else}}{{.URL}}{{end}}</option>{{end}}
+            </select>
+        </div>
+        <div>
+            <label for="per_page">Per page</label>
+            <input id="per_page" name="per_page" type="number" min="1" max="500" value="{{.pagination.PerPage}}">
+        </div>
+        <button type="submit">Áp dụng</button>
+        <a class="button secondary" href="{{.exportURL}}">Excel</a>
+    </form>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>UID</th>
+            <th>SĐT</th>
+            <th>Tên bài</th>
+            <th>Tên FB</th>
+            <th>Comment</th>
+            <th>Ngày comment</th>
+            <th>Thời gian cào</th>
+            <th>Tham chiếu</th>
+        </tr>
+        </thead>
+        <tbody id="commentsBody">
+        {{range .comments}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td class="narrow">{{if .AuthorUID}}{{.AuthorUID}}{{else}}<span class="muted">-</span>{{end}}</td>
+            <td class="narrow">{{if .Phone}}{{.Phone}}{{else}}<span class="muted">-</span>{{end}}</td>
+            <td class="url">
+                <div>#{{.LinkID}}</div>
+                {{if .Link.URL}}<a class="title-link" href="{{if .Link.FinalURL}}{{.Link.FinalURL}}{{else}}{{.Link.URL}}{{end}}" target="_blank" rel="noreferrer" title="{{if .Link.FinalURL}}{{.Link.FinalURL}}{{else}}{{.Link.URL}}{{end}}">{{if .Link.Title}}{{.Link.Title}}{{else}}Link Facebook chưa đặt tiêu đề{{end}}</a>{{else}}<span class="muted">-</span>{{end}}
+            </td>
+            <td class="url">{{if .ProfileURL}}<a class="title-link" href="{{.ProfileURL}}" target="_blank" rel="noreferrer">{{if .Author}}{{.Author}}{{else}}Facebook user{{end}}</a>{{else}}{{if .Author}}{{.Author}}{{else}}<span class="muted">-</span>{{end}}{{end}}</td>
+            <td class="comment">{{.CommentText}}</td>
+            <td>{{if .FacebookCreatedAt}}{{.FacebookCreatedAt.Format "2006-01-02 15:04:05"}}{{else}}{{if .DateLabel}}{{.DateLabel}}{{else}}{{.ScrapedAt.Format "2006-01-02 15:04:05"}}{{end}}{{end}}</td>
+            <td>{{.ScrapedAt.Format "2006-01-02 15:04:05"}}</td>
+            <td>
+                {{if .Permalink}}<a href="{{.Permalink}}" target="_blank" rel="noreferrer">Permalink</a>{{end}}
+                {{if .ProfileURL}}<div><a href="{{.ProfileURL}}" target="_blank" rel="noreferrer">Profile</a></div>{{end}}
+            </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="9" class="muted">Chưa có comment nào trong filter hiện tại.</td></tr>
+        {{end}}
+        </tbody>
+    </table>
+    <div class="pager">
+        <div class="muted">Trang {{.pagination.Page}} / {{.pagination.TotalPages}} · Tổng: {{.pagination.Total}}</div>
+        <div class="pager-actions">
+            {{if .prevPageURL}}<a class="button secondary" href="{{.prevPageURL}}">Trước</a>{{else}}<span class="button secondary" style="opacity:.5; cursor:not-allowed;">Trước</span>{{end}}
+            {{if .nextPageURL}}<a class="button secondary" href="{{.nextPageURL}}">Sau</a>{{else}}<span class="button secondary" style="opacity:.5; cursor:not-allowed;">Sau</span>{{end}}
+        </div>
+    </div>
+</div>
+
+<script>
+const message = document.getElementById('message');
+const scrapeForm = document.getElementById('scrapeForm');
+const scrapeButton = document.getElementById('scrapeButton');
+const commentsBody = document.getElementById('commentsBody');
+const commentCount = document.getElementById('commentCount');
+const scrapeItems = document.getElementById('scrapeItems');
+const addRowButton = document.getElementById('addRowButton');
+const commentPage = {{.pagination.Page}};
+const perPage = {{.pagination.PerPage}};
+const filterCommentDate = {{.filterCommentDate}};
+const filterLinkID = {{.filterLinkID}};
+
+function showMessage(type, text) {
+    message.innerHTML = text ? `<div class="${type}">${text}</div>` : '';
+}
+
+function escapeHTML(value) {
+    return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function formatTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return escapeHTML(value);
+    return date.toLocaleString('vi-VN');
+}
+
+function commentDate(comment) {
+    if (comment.facebook_created_at) return formatTime(comment.facebook_created_at);
+    if (comment.date_label) return escapeHTML(comment.date_label);
+    return formatTime(comment.scraped_at);
+}
+
+function renderScrapeRow() {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'scrape-item';
+    wrapper.innerHTML = `
+        <div>
+            <label>Tiêu đề</label>
+            <input class="scrape-title" placeholder="Tên để dễ nhận biết">
+        </div>
+        <div>
+            <label>Facebook URL</label>
+            <input class="scrape-url" placeholder="https://www.facebook.com/..." required>
+        </div>
+        <button type="button" class="secondary remove-row">Xóa dòng</button>
+    `;
+    return wrapper;
+}
+
+function bindRemoveButtons() {
+    document.querySelectorAll('.remove-row').forEach((button) => {
+        button.onclick = () => {
+            const rows = Array.from(document.querySelectorAll('.scrape-item'));
+            if (rows.length === 1) {
+                rows[0].querySelector('.scrape-title').value = '';
+                rows[0].querySelector('.scrape-url').value = '';
+                return;
+            }
+            button.closest('.scrape-item')?.remove();
+        };
+    });
+}
+
+async function fetchJSON(url, options = {}) {
+    const response = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', ...(options.headers || {}) },
+        ...options,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}`);
+    }
+    return data;
+}
+
+async function refreshComments() {
+    const params = new URLSearchParams({ page: String(commentPage), per_page: String(perPage) });
+    if (filterCommentDate) params.set('comment_date', filterCommentDate);
+    if (filterLinkID && filterLinkID !== '0') params.set('link_id', filterLinkID);
+    const data = await fetchJSON(`/api/comments?${params.toString()}`);
+    const comments = data.comments || [];
+    commentCount.textContent = String(data.pagination?.total ?? comments.length);
+    if (!comments.length) {
+        commentsBody.innerHTML = '<tr><td colspan="9" class="muted">Chưa có comment nào trong filter hiện tại.</td></tr>';
+        return;
+    }
+
+    commentsBody.innerHTML = comments.map((comment) => {
+        const link = comment.link || {};
+        const linkURL = link.final_url || link.url || '';
+        const linkTitle = link.title || 'Link Facebook chưa đặt tiêu đề';
+        const postLink = linkURL ? `<a class="title-link" href="${escapeHTML(linkURL)}" target="_blank" rel="noreferrer" title="${escapeHTML(linkURL)}">${escapeHTML(linkTitle)}</a>` : '<span class="muted">-</span>';
+        const fbName = comment.profile_url ? `<a class="title-link" href="${escapeHTML(comment.profile_url)}" target="_blank" rel="noreferrer">${escapeHTML(comment.author || 'Facebook user')}</a>` : escapeHTML(comment.author || '-');
+        const permalink = comment.permalink ? `<a href="${escapeHTML(comment.permalink)}" target="_blank" rel="noreferrer">Permalink</a>` : '';
+        const profile = comment.profile_url ? `<div><a href="${escapeHTML(comment.profile_url)}" target="_blank" rel="noreferrer">Profile</a></div>` : '';
+        return `
+            <tr>
+                <td>${comment.id}</td>
+                <td class="narrow">${escapeHTML(comment.author_uid || '-')}</td>
+                <td class="narrow">${escapeHTML(comment.phone || '-')}</td>
+                <td class="url"><div>#${comment.link_id}</div>${postLink}</td>
+                <td class="url">${fbName}</td>
+                <td class="comment">${escapeHTML(comment.comment_text)}</td>
+                <td>${commentDate(comment)}</td>
+                <td>${formatTime(comment.scraped_at)}</td>
+                <td>${permalink}${profile}</td>
+            </tr>`;
+    }).join('');
+}
+
+function collectScrapeLinks() {
+    return Array.from(document.querySelectorAll('.scrape-item')).map((row) => ({
+        title: row.querySelector('.scrape-title')?.value.trim() || '',
+        url: row.querySelector('.scrape-url')?.value.trim() || '',
+    })).filter((item) => item.url);
+}
+
+addRowButton.addEventListener('click', () => {
+    scrapeItems.appendChild(renderScrapeRow());
+    bindRemoveButtons();
+});
+
+scrapeForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const links = collectScrapeLinks();
+    if (!links.length) {
+        showMessage('error', 'Vui lòng nhập ít nhất 1 link Facebook.');
+        return;
+    }
+
+    scrapeButton.disabled = true;
+    scrapeButton.textContent = 'Đang cào...';
+    showMessage('info', 'Đang cào comment bằng Playwright, vui lòng chờ...');
+
+    try {
+        const data = await fetchJSON('/api/scrape', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                links,
+                max_comments: Number(document.getElementById('maxComments').value || 50),
+                max_scrolls: Number(document.getElementById('maxScrolls').value || 20),
+                idle_passes: Number(document.getElementById('idlePasses').value || 2),
+                refresh: true,
+            }),
+        });
+        const inserted = (data.results || []).reduce((sum, item) => sum + (item.inserted_count || 0), 0);
+        const failed = (data.errors || []).length;
+        showMessage(failed ? 'info' : 'success', `Cào xong. Lưu mới ${inserted} comment. Lỗi ${failed} link.`);
+        await refreshComments();
+    } catch (error) {
+        showMessage('error', error.message);
+    } finally {
+        scrapeButton.disabled = false;
+        scrapeButton.textContent = 'Cào và lưu comment';
+    }
+});
+
+bindRemoveButtons();
+refreshComments().catch((error) => showMessage('error', error.message));
+</script>
+    </main>
+</div>
+</body>
+</html>

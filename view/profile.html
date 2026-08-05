@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Thông tin người dùng</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f3f4f6; margin: 0; }
+        .card { width: 520px; margin: 60px auto; background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+        h1 { margin-top: 0; font-size: 24px; }
+        label { display: block; margin: 16px 0 6px; font-weight: 600; }
+        input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; }
+        button { margin-top: 20px; padding: 11px 16px; border: 0; border-radius: 8px; color: #fff; background: #2563eb; font-weight: 700; cursor: pointer; }
+        .logout { background: #6b7280; }
+        .success { margin-bottom: 16px; padding: 10px 12px; border-radius: 8px; color: #166534; background: #dcfce7; }
+        .error { margin-bottom: 16px; padding: 10px 12px; border-radius: 8px; color: #991b1b; background: #fee2e2; }
+        .row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="row">
+        <h1>Xin chào, {{.user.Username}}</h1>
+        <div>
+            <a href="/links?active=true" style="display:inline-block;margin-right:8px;padding:11px 16px;border-radius:8px;color:#fff;background:#2563eb;font-weight:700;text-decoration:none;">Quản lý link</a>
+            <a href="/comments" style="display:inline-block;margin-right:8px;padding:11px 16px;border-radius:8px;color:#fff;background:#059669;font-weight:700;text-decoration:none;">Comments</a>
+            <form method="post" action="/logout" style="display:inline-block;">
+                <button class="logout" type="submit">Đăng xuất</button>
+            </form>
+        </div>
+    </div>
+
+    {{if eq .success "password_updated"}}<div class="success">Cập nhật mật khẩu thành công.</div>{{end}}
+    {{if .error}}<div class="error">{{.error}}</div>{{end}}
+
+    <h2>Đổi mật khẩu</h2>
+    <form method="post" action="/password">
+        <label for="old_password">Mật khẩu hiện tại</label>
+        <input id="old_password" name="old_password" type="password" autocomplete="current-password" required>
+
+        <label for="new_password">Mật khẩu mới</label>
+        <input id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="6" required>
+
+        <label for="confirm_password">Nhập lại mật khẩu mới</label>
+        <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="6" required>
+
+        <button type="submit">Cập nhật mật khẩu</button>
+    </form>
+</div>
+</body>
+</html>
