@@ -22,7 +22,7 @@ fb_comment/
 - User đã đăng nhập có thể vào module User để xem username/role của chính mình và đổi mật khẩu.
 - Admin có thể xem toàn bộ user và quản lý user: thêm, sửa role/password/limit, xóa user.
 
-## Cấu hình PostgreSQL
+## Cấu hình và chạy ứng dụng
 
 Ứng dụng đọc `DATABASE_DSN` nếu có. Nếu không có, ứng dụng dùng các biến sau:
 
@@ -40,27 +40,56 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=123456789
 ```
 
-Khởi tạo PostgreSQL bằng Docker Compose ở port `5435`:
+### Chạy bằng Docker Compose trên VPS
+
+1. Tạo file môi trường từ mẫu:
 
 ```bash
-docker compose up -d
+cp .env.example .env
 ```
 
-Kiểm tra container:
+2. Sửa các giá trị quan trọng trong `.env`:
+   - `DB_PASSWORD`
+   - `JWT_SECRET`
+   - `ADMIN_PASSWORD`
+   - nếu cần thì đổi thêm `APP_PORT`
+
+3. Khởi động toàn bộ stack:
+
+```bash
+docker compose up -d --build
+```
+
+4. Kiểm tra container:
 
 ```bash
 docker compose ps
 ```
 
-Dừng PostgreSQL:
+5. Xem log app:
 
 ```bash
-docker compose down
+docker compose logs -f app
 ```
 
-Chạy project:
+6. Mở ứng dụng:
+
+```text
+http://<VPS_IP>:8080
+```
+
+Ghi chú:
+
+- PostgreSQL chỉ bind nội bộ ở `127.0.0.1:5435` trên VPS.
+- App container đã dùng image có Chromium/Playwright sẵn, không cần cài browser thủ công.
+- Dừng stack bằng `docker compose down`.
+
+### Chạy local không Docker
+
+Nếu muốn chạy trực tiếp trên máy local:
 
 ```bash
+go run github.com/mxschmitt/playwright-go/cmd/playwright install chromium
 go mod tidy
 go run .
 ```
@@ -236,13 +265,13 @@ Comment được lưu tách riêng:
 - tên bài/link bài lấy từ bảng `links` qua `link_id` (`title`, `url`, `final_url`)
 - chống trùng bằng `comment_key`; nếu permalink có `comment_id` hoặc `reply_comment_id` thì tách ID đó lưu thẳng vào `comment_key` để check trùng
 
-Cài browser cho Playwright nếu máy chưa có:
+Cài browser cho Playwright nếu chạy local không Docker:
 
 ```bash
 go run github.com/mxschmitt/playwright-go/cmd/playwright install chromium
 ```
 
-Biến môi trường scraper:
+Biến môi trường scraper (Docker image đã có Chromium sẵn, phần này chỉ cần cho local):
 
 ```bash
 SCRAPER_HEADLESS=true

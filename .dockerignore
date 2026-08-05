@@ -1,0 +1,6 @@
+.git
+.github
+*.log
+.env
+.DS_Store
+fb_comment

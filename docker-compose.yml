@@ -4,11 +4,11 @@ services:
     container_name: fb_comment_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: fb_comment
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-fb_comment}
     ports:
-      - "5435:5432"
+      - "127.0.0.1:5435:5432"
     volumes:
       - fb_comment_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,6 +16,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fb_comment_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_DSN: "host=postgres user=${DB_USER:-postgres} password=${DB_PASSWORD:-postgres} dbname=${DB_NAME:-fb_comment} port=5432 sslmode=${DB_SSLMODE:-disable} TimeZone=${DB_TIMEZONE:-Asia/Ho_Chi_Minh}"
+      APP_PORT: ${APP_PORT:-8080}
+      SCRAPER_HEADLESS: ${SCRAPER_HEADLESS:-true}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    shm_size: "1gb"
 
 volumes:
   fb_comment_postgres_data:
