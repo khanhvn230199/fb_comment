@@ -25,6 +25,8 @@ COPY --from=builder /go/bin/playwright /usr/local/bin/playwright
 USER pwuser
 RUN playwright install chromium
 
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=10 CMD node -e "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
 EXPOSE 8080
 
 CMD ["/home/pwuser/app/fb_comment"]

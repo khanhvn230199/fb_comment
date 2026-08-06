@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
+	"time"
 
 	"fb_comment/controller"
 	"fb_comment/model"
@@ -39,6 +41,7 @@ func main() {
 
 	router := gin.Default()
 	router.LoadHTMLGlob("view/*.html")
+	router.GET("/healthz", healthz)
 
 	controller.RegisterRoutes(router, commentScraper)
 
@@ -47,6 +50,24 @@ func main() {
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func healthz(c *gin.Context) {
+	sqlDB, err := model.DB.DB()
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unhealthy", "database": "unavailable"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	defer cancel()
+
+	if err := sqlDB.PingContext(ctx); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unhealthy", "database": "down"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
 func getEnv(key, fallback string) string {

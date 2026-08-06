@@ -42,6 +42,14 @@ ADMIN_PASSWORD=123456789
 
 ### Chạy bằng Docker Compose trên VPS
 
+Nếu muốn bootstrap tự động trên VPS, chạy:
+
+```bash
+bash bootstrap-vps.sh
+```
+
+Script này sẽ cài Docker nếu cần, clone repo vào `/root/fb_comment`, tạo `.env`, yêu cầu các secrets cần thiết và khởi động stack.
+
 1. Tạo file môi trường từ mẫu:
 
 ```bash
@@ -54,11 +62,13 @@ cp .env.example .env
    - `ADMIN_PASSWORD`
    - nếu cần thì đổi thêm `APP_PORT`
 
-3. Khởi động toàn bộ stack:
+3. Khởi động stack bằng image do workflow push lên GHCR:
 
 ```bash
-docker compose up -d --build
+APP_IMAGE=ghcr.io/<owner>/<repo>:sha-<commit> docker compose up -d --no-build
 ```
+
+Nếu bạn dùng VPS ở `root@204.168.143.212`, thư mục deploy mình đã chuẩn bị là `/root/fb_comment`.
 
 4. Kiểm tra container:
 
@@ -72,7 +82,13 @@ docker compose ps
 docker compose logs -f app
 ```
 
-6. Mở ứng dụng:
+6. Kiểm tra health endpoint:
+
+```bash
+curl -fsS http://127.0.0.1:8080/healthz
+```
+
+7. Mở ứng dụng:
 
 ```text
 http://<VPS_IP>:8080
@@ -83,6 +99,29 @@ Ghi chú:
 - PostgreSQL chỉ bind nội bộ ở `127.0.0.1:5435` trên VPS.
 - App container đã dùng image có Chromium/Playwright sẵn, không cần cài browser thủ công.
 - Dừng stack bằng `docker compose down`.
+
+## CI/CD với GitHub Actions
+
+Pipeline được đề xuất cho repo này:
+
+- **Pull request / push bất kỳ nhánh nào**: chạy `gofmt` check, `go mod verify`, `go vet ./...`, `go test ./...`, `docker build`, và `docker compose config`.
+- **Push vào `main`**: build image từ `Dockerfile`, push lên GHCR với tag `sha-<commit>` và `latest`, sau đó SSH vào VPS để `docker compose pull app` và `docker compose up -d --no-build`.
+- Sau deploy, workflow gọi `GET /healthz` để xác nhận app và PostgreSQL đã sẵn sàng.
+
+Secrets cần có trên GitHub:
+
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_KEY`
+- `VPS_APP_DIR`
+- `VPS_PORT` nếu VPS không dùng SSH port mặc định
+
+Secrets của ứng dụng vẫn nên nằm trên VPS trong file `.env`:
+
+- `DB_PASSWORD`
+- `JWT_SECRET`
+- `ADMIN_PASSWORD`
+- các biến cấu hình DB/app khác nếu bạn thay đổi mặc định
 
 ### Chạy local không Docker
 
