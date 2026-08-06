@@ -32,13 +32,63 @@ type CommentRequest struct {
 	FacebookCreatedAt string `json:"facebook_created_at" form:"facebook_created_at"`
 }
 
+const commentDateLayout = "2006-01-02"
+
 type CommentFilters struct {
 	LinkID      uint
-	Date        string
+	StartDate   string
+	EndDate     string
 	HasDate     bool
 	DateStart   time.Time
 	DateEnd     time.Time
 	DefaultDate bool
+}
+
+func commentDateRangeFromValues(startValue, endValue, legacyValue string, defaultToday bool) (CommentFilters, int, string) {
+	filters := CommentFilters{}
+	startValue = strings.TrimSpace(startValue)
+	endValue = strings.TrimSpace(endValue)
+	legacyValue = strings.TrimSpace(legacyValue)
+
+	if startValue == "" && endValue == "" {
+		if legacyValue != "" {
+			startValue = legacyValue
+			endValue = legacyValue
+		} else if defaultToday {
+			today := time.Now().In(time.Local).Format(commentDateLayout)
+			startValue = today
+			endValue = today
+			filters.DefaultDate = true
+		} else {
+			return filters, 0, ""
+		}
+	} else {
+		if startValue == "" {
+			startValue = endValue
+		}
+		if endValue == "" {
+			endValue = startValue
+		}
+	}
+
+	startDay, err := time.ParseInLocation(commentDateLayout, startValue, time.Local)
+	if err != nil {
+		return filters, http.StatusBadRequest, "Ngày comment không hợp lệ"
+	}
+	endDay, err := time.ParseInLocation(commentDateLayout, endValue, time.Local)
+	if err != nil {
+		return filters, http.StatusBadRequest, "Ngày comment không hợp lệ"
+	}
+	if startDay.After(endDay) {
+		return filters, http.StatusBadRequest, "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc"
+	}
+
+	filters.StartDate = startValue
+	filters.EndDate = endValue
+	filters.HasDate = true
+	filters.DateStart = startDay.UTC()
+	filters.DateEnd = endDay.AddDate(0, 0, 1).UTC()
+	return filters, 0, ""
 }
 
 func commentFiltersFromRequest(c *gin.Context, user model.User, defaultToday bool) (CommentFilters, int, string) {
@@ -54,20 +104,17 @@ func commentFiltersFromRequest(c *gin.Context, user model.User, defaultToday boo
 		filters.LinkID = uint(linkID)
 	}
 
-	dateValue := strings.TrimSpace(c.Query("comment_date"))
-	if dateValue == "" && defaultToday {
-		dateValue = time.Now().In(time.Local).Format("2006-01-02")
-		filters.DefaultDate = true
+	dateFilters, status, message := commentDateRangeFromValues(c.Query("comment_start_date"), c.Query("comment_end_date"), c.Query("comment_date"), defaultToday)
+	if status != 0 {
+		return filters, status, message
 	}
-	if dateValue != "" {
-		day, err := time.ParseInLocation("2006-01-02", dateValue, time.Local)
-		if err != nil {
-			return filters, http.StatusBadRequest, "Ngày comment không hợp lệ"
-		}
-		filters.Date = dateValue
+	if dateFilters.HasDate {
+		filters.StartDate = dateFilters.StartDate
+		filters.EndDate = dateFilters.EndDate
 		filters.HasDate = true
-		filters.DateStart = day.UTC()
-		filters.DateEnd = day.AddDate(0, 0, 1).UTC()
+		filters.DateStart = dateFilters.DateStart
+		filters.DateEnd = dateFilters.DateEnd
+		filters.DefaultDate = dateFilters.DefaultDate
 	}
 
 	return filters, 0, ""
@@ -137,18 +184,19 @@ func ShowCommentsPage(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "comments.html", gin.H{
-		"comments":          comments,
-		"links":             links,
-		"currentUser":       user,
-		"limit":             pagination.PerPage,
-		"pagination":        pagination,
-		"prevPageURL":       paginationPrevURL(c, pagination),
-		"nextPageURL":       paginationNextURL(c, pagination),
-		"filterCommentDate": filters.Date,
-		"filterLinkID":      strconv.FormatUint(uint64(filters.LinkID), 10),
-		"exportURL":         commentsExportURL(c),
-		"error":             c.Query("error"),
-		"success":           c.Query("success"),
+		"comments":               comments,
+		"links":                  links,
+		"currentUser":            user,
+		"limit":                  pagination.PerPage,
+		"pagination":             pagination,
+		"prevPageURL":            paginationPrevURL(c, pagination),
+		"nextPageURL":            paginationNextURL(c, pagination),
+		"filterCommentStartDate": filters.StartDate,
+		"filterCommentEndDate":   filters.EndDate,
+		"filterLinkID":           strconv.FormatUint(uint64(filters.LinkID), 10),
+		"exportURL":              commentsExportURL(c),
+		"error":                  c.Query("error"),
+		"success":                c.Query("success"),
 	})
 }
 
@@ -197,9 +245,12 @@ func ExportComments(c *gin.Context) {
 
 	normalizeCommentTimes(comments)
 
-	filenameDate := filters.Date
+	filenameDate := filters.StartDate
 	if filenameDate == "" {
-		filenameDate = time.Now().In(time.Local).Format("2006-01-02")
+		filenameDate = time.Now().In(time.Local).Format(commentDateLayout)
+	}
+	if filters.HasDate && filters.EndDate != "" && filters.EndDate != filters.StartDate {
+		filenameDate = filters.StartDate + "_to_" + filters.EndDate
 	}
 	c.Header("Content-Type", "text/csv; charset=utf-8")
 	c.Header("Content-Disposition", `attachment; filename="comments-`+filenameDate+`.csv"`)

@@ -27,7 +27,8 @@
         .error { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #991b1b; background: #fee2e2; }
         .info { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #1e3a8a; background: #dbeafe; }
         .grid { display: grid; grid-template-columns: 1fr 160px 160px 220px; gap: 12px; align-items: end; }
-        .filter-grid { display: grid; grid-template-columns: 180px 1fr 140px auto auto; gap: 12px; align-items: end; margin-bottom: 18px; }
+        .filter-grid { display: grid; grid-template-columns: 180px 180px 1fr 140px auto auto; gap: 12px; align-items: end; margin-bottom: 18px; }
+        .field-hint { margin-top: 6px; color: #6b7280; font-size: 12px; line-height: 1.35; }
         .scrape-items { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
         .scrape-item { display: grid; grid-template-columns: 220px 1fr auto; gap: 12px; align-items: end; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; }
         .scrape-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
@@ -124,10 +125,16 @@
     </div>
 
     <h2 style="margin-top:28px;">Danh sách comment</h2>
+    <p class="muted">Lọc theo khoảng thời gian để xem comment trong một ngày hoặc một dải ngày cụ thể.</p>
     <form method="get" action="/comments" class="filter-grid">
         <div>
-            <label for="comment_date">Ngày comment</label>
-            <input id="comment_date" name="comment_date" type="date" value="{{.filterCommentDate}}">
+            <label for="comment_start_date">Từ ngày</label>
+            <input id="comment_start_date" name="comment_start_date" type="date" value="{{.filterCommentStartDate}}">
+            <div class="field-hint">Để trống một bên sẽ lọc theo ngày còn lại.</div>
+        </div>
+        <div>
+            <label for="comment_end_date">Đến ngày</label>
+            <input id="comment_end_date" name="comment_end_date" type="date" value="{{.filterCommentEndDate}}">
         </div>
         <div>
             <label for="link_id">Link</label>
@@ -200,8 +207,9 @@ const scrapeItems = document.getElementById('scrapeItems');
 const addRowButton = document.getElementById('addRowButton');
 const commentPage = {{.pagination.Page}};
 const perPage = {{.pagination.PerPage}};
-const filterCommentDate = {{.filterCommentDate}};
-const filterLinkID = {{.filterLinkID}};
+const filterCommentStartDate = {{printf "%q" .filterCommentStartDate}};
+const filterCommentEndDate = {{printf "%q" .filterCommentEndDate}};
+const filterLinkID = {{printf "%q" .filterLinkID}};
 
 function showMessage(type, text) {
     message.innerHTML = text ? `<div class="${type}">${text}</div>` : '';
@@ -275,8 +283,9 @@ async function fetchJSON(url, options = {}) {
 
 async function refreshComments() {
     const params = new URLSearchParams({ page: String(commentPage), per_page: String(perPage) });
-    if (filterCommentDate) params.set('comment_date', filterCommentDate);
-    if (filterLinkID && filterLinkID !== '0') params.set('link_id', filterLinkID);
+    if (filterCommentStartDate) params.set('comment_start_date', filterCommentStartDate);
+    if (filterCommentEndDate) params.set('comment_end_date', filterCommentEndDate);
+    if (filterLinkID) params.set('link_id', filterLinkID);
     const data = await fetchJSON(`/api/comments?${params.toString()}`);
     const comments = data.comments || [];
     commentCount.textContent = String(data.pagination?.total ?? comments.length);
