@@ -117,5 +117,25 @@ jobs:
             export APP_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
             docker compose pull app
             docker compose up -d --no-build --remove-orphans
+
+            app_container="$(docker compose ps -q app)"
+            if [ -z "$app_container" ]; then
+              docker compose ps
+              docker compose logs --tail=200 app
+              exit 1
+            fi
+
+            for _ in $(seq 1 90); do
+              health_status="$(docker inspect -f '{{.State.Health.Status}}' "$app_container" 2>/dev/null || true)"
+              if [ "$health_status" = "healthy" ]; then
+                break
+              fi
+              if [ "$health_status" = "unhealthy" ]; then
+                docker compose logs --tail=200 app
+                exit 1
+              fi
+              sleep 2
+            done
+
             docker compose ps
             curl -fsS http://127.0.0.1:8080/healthz >/dev/null
