@@ -54,6 +54,9 @@ jobs:
       - name: Build Docker image
         run: docker build --pull -t fb_comment:ci .
 
+      - name: Prepare compose env file
+        run: cp .env.example .env
+
       - name: Validate Compose file
         run: docker compose config
 
