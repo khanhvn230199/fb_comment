@@ -16,7 +16,6 @@
         .content { flex: 1; min-width: 0; padding: 32px; }
         .container { max-width: 1440px; margin: 40px auto; background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
         h1, h2 { margin-top: 0; }
-        .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
         label { display: block; margin: 12px 0 6px; font-weight: 600; }
         input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; }
         textarea { min-height: 110px; font-family: Arial, sans-serif; }
@@ -26,13 +25,18 @@
         .success { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #166534; background: #dcfce7; }
         .error { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #991b1b; background: #fee2e2; }
         .info { margin: 16px 0; padding: 10px 12px; border-radius: 8px; color: #1e3a8a; background: #dbeafe; }
-        .grid { display: grid; grid-template-columns: 1fr 160px 160px 220px; gap: 12px; align-items: end; }
-        .filter-grid { display: grid; grid-template-columns: 180px 180px 1fr 140px auto auto; gap: 12px; align-items: end; margin-bottom: 18px; }
+        .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 160px) minmax(0, 160px) minmax(0, 220px); gap: 12px; align-items: end; }
+        .filter-grid { display: grid; grid-template-columns: minmax(0, 180px) minmax(0, 180px) minmax(0, 1fr) minmax(0, 140px) max-content max-content; gap: 12px; align-items: end; margin-bottom: 18px; }
+        .filter-grid > * { min-width: 0; }
+        .filter-grid .button,
+        .filter-grid button { white-space: nowrap; }
         .field-hint { margin-top: 6px; color: #6b7280; font-size: 12px; line-height: 1.35; }
         .scrape-items { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
-        .scrape-item { display: grid; grid-template-columns: 220px 1fr auto; gap: 12px; align-items: end; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; }
+        .scrape-item { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr) max-content; gap: 12px; align-items: end; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; }
         .scrape-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 18px; }
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 18px; }
+        .table-wrap table { min-width: 980px; margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
         th { background: #f9fafb; }
         .url, .comment { max-width: 320px; overflow-wrap: anywhere; }
@@ -47,13 +51,31 @@
         .pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding: 12px 0; }
         .pager-actions { display: flex; gap: 8px; }
         .button { display: inline-block; padding: 9px 13px; border: 0; border-radius: 8px; color: #fff; background: #2563eb; font-weight: 700; cursor: pointer; text-decoration: none; }
+        @media (max-width: 1100px) {
+            .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .filter-grid > :nth-last-child(-n+2) { grid-column: span 1; }
+        }
         @media (max-width: 900px) {
             .app { display: block; }
             .sidebar { position: static; width: auto; height: auto; }
-            .grid, .filter-grid { grid-template-columns: 1fr; }
-            .scrape-item { grid-template-columns: 1fr; }
-            .container { margin: 16px 0; }
-            .content { padding: 16px; }
+            .grid, .scrape-item { grid-template-columns: 1fr; }
+            .scrape-item button { width: 100%; }
+            .container { margin: 16px 0; padding: 16px; }
+            .content { padding: 12px; }
+        }
+        @media (max-width: 640px) {
+            .filter-grid { grid-template-columns: 1fr; }
+            .filter-grid button,
+            .filter-grid .button { width: 100%; }
+            .pager { align-items: stretch; }
+            .pager > div:first-child { width: 100%; }
+            .pager-actions { width: 100%; }
+            .pager-actions .button { flex: 1 1 0; text-align: center; }
+            .summary { flex-direction: column; align-items: flex-start; }
+            .scrape-actions { flex-direction: column; }
+            .scrape-actions button { width: 100%; }
+            h1 { font-size: 1.6rem; }
+            h2 { font-size: 1.25rem; }
         }
     </style>
 </head>
@@ -150,44 +172,46 @@
         <button type="submit">Áp dụng</button>
         <a class="button secondary" href="{{.exportURL}}">Excel</a>
     </form>
-    <table>
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>UID</th>
-            <th>SĐT</th>
-            <th>Tên bài</th>
-            <th>Tên FB</th>
-            <th>Comment</th>
-            <th>Ngày comment</th>
-            <th>Thời gian cào</th>
-            <th>Tham chiếu</th>
-        </tr>
-        </thead>
-        <tbody id="commentsBody">
-        {{range .comments}}
-        <tr>
-            <td>{{.ID}}</td>
-            <td class="narrow">{{if .AuthorUID}}{{.AuthorUID}}{{else}}<span class="muted">-</span>{{end}}</td>
-            <td class="narrow">{{if .Phone}}{{.Phone}}{{else}}<span class="muted">-</span>{{end}}</td>
-            <td class="url">
-                <div>#{{.LinkID}}</div>
-                {{if .Link.URL}}<a class="title-link" href="{{if .Link.FinalURL}}{{.Link.FinalURL}}{{else}}{{.Link.URL}}{{end}}" target="_blank" rel="noreferrer" title="{{if .Link.FinalURL}}{{.Link.FinalURL}}{{else}}{{.Link.URL}}{{end}}">{{if .Link.Title}}{{.Link.Title}}{{else}}Link Facebook chưa đặt tiêu đề{{end}}</a>{{else}}<span class="muted">-</span>{{end}}
-            </td>
-            <td class="url">{{if .ProfileURL}}<a class="title-link" href="{{.ProfileURL}}" target="_blank" rel="noreferrer">{{if .Author}}{{.Author}}{{else}}Facebook user{{end}}</a>{{else}}{{if .Author}}{{.Author}}{{else}}<span class="muted">-</span>{{end}}{{end}}</td>
-            <td class="comment">{{.CommentText}}</td>
-            <td>{{if .FacebookCreatedAt}}{{.FacebookCreatedAt.Format "2006-01-02 15:04:05"}}{{else}}{{if .DateLabel}}{{.DateLabel}}{{else}}{{.ScrapedAt.Format "2006-01-02 15:04:05"}}{{end}}{{end}}</td>
-            <td>{{.ScrapedAt.Format "2006-01-02 15:04:05"}}</td>
-            <td>
-                {{if .Permalink}}<a href="{{.Permalink}}" target="_blank" rel="noreferrer">Permalink</a>{{end}}
-                {{if .ProfileURL}}<div><a href="{{.ProfileURL}}" target="_blank" rel="noreferrer">Profile</a></div>{{end}}
-            </td>
-        </tr>
-        {{else}}
-        <tr><td colspan="9" class="muted">Chưa có comment nào trong filter hiện tại.</td></tr>
-        {{end}}
-        </tbody>
-    </table>
+    <div class="table-wrap">
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>UID</th>
+                <th>SĐT</th>
+                <th>Tên bài</th>
+                <th>Tên FB</th>
+                <th>Comment</th>
+                <th>Ngày comment</th>
+                <th>Thời gian cào</th>
+                <th>Tham chiếu</th>
+            </tr>
+            </thead>
+            <tbody id="commentsBody">
+            {{range .comments}}
+            <tr>
+                <td>{{.ID}}</td>
+                <td class="narrow">{{if .AuthorUID}}{{.AuthorUID}}{{else}}<span class="muted">-</span>{{end}}</td>
+                <td class="narrow">{{if .Phone}}{{.Phone}}{{else}}<span class="muted">-</span>{{end}}</td>
+                <td class="url">
+                    <div>#{{.LinkID}}</div>
+                    {{if .Link.URL}}<a class="title-link" href="{{if .Link.FinalURL}}{{.Link.FinalURL}}{{else}}{{.Link.URL}}{{end}}" target="_blank" rel="noreferrer" title="{{if .Link.FinalURL}}{{.Link.FinalURL}}{{else}}{{.Link.URL}}{{end}}">{{if .Link.Title}}{{.Link.Title}}{{else}}Link Facebook chưa đặt tiêu đề{{end}}</a>{{else}}<span class="muted">-</span>{{end}}
+                </td>
+                <td class="url">{{if .ProfileURL}}<a class="title-link" href="{{.ProfileURL}}" target="_blank" rel="noreferrer">{{if .Author}}{{.Author}}{{else}}Facebook user{{end}}</a>{{else}}{{if .Author}}{{.Author}}{{else}}<span class="muted">-</span>{{end}}{{end}}</td>
+                <td class="comment">{{.CommentText}}</td>
+                <td>{{if .FacebookCreatedAt}}{{.FacebookCreatedAt.Format "2006-01-02 15:04:05"}}{{else}}{{if .DateLabel}}{{.DateLabel}}{{else}}{{.ScrapedAt.Format "2006-01-02 15:04:05"}}{{end}}{{end}}</td>
+                <td>{{.ScrapedAt.Format "2006-01-02 15:04:05"}}</td>
+                <td>
+                    {{if .Permalink}}<a href="{{.Permalink}}" target="_blank" rel="noreferrer">Permalink</a>{{end}}
+                    {{if .ProfileURL}}<div><a href="{{.ProfileURL}}" target="_blank" rel="noreferrer">Profile</a></div>{{end}}
+                </td>
+            </tr>
+            {{else}}
+            <tr><td colspan="9" class="muted">Chưa có comment nào trong filter hiện tại.</td></tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
     <div class="pager">
         <div class="muted">Trang {{.pagination.Page}} / {{.pagination.TotalPages}} · Tổng: {{.pagination.Total}}</div>
         <div class="pager-actions">
@@ -207,9 +231,9 @@ const scrapeItems = document.getElementById('scrapeItems');
 const addRowButton = document.getElementById('addRowButton');
 const commentPage = {{.pagination.Page}};
 const perPage = {{.pagination.PerPage}};
-const filterCommentStartDate = {{printf "%q" .filterCommentStartDate}};
-const filterCommentEndDate = {{printf "%q" .filterCommentEndDate}};
-const filterLinkID = {{printf "%q" .filterLinkID}};
+const filterCommentStartDate = "{{.filterCommentStartDate}}";
+const filterCommentEndDate = "{{.filterCommentEndDate}}";
+const filterLinkID = "{{.filterLinkID}}";
 
 function showMessage(type, text) {
     message.innerHTML = text ? `<div class="${type}">${text}</div>` : '';

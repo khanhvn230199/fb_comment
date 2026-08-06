@@ -46,9 +46,9 @@ type CommentFilters struct {
 
 func commentDateRangeFromValues(startValue, endValue, legacyValue string, defaultToday bool) (CommentFilters, int, string) {
 	filters := CommentFilters{}
-	startValue = strings.TrimSpace(startValue)
-	endValue = strings.TrimSpace(endValue)
-	legacyValue = strings.TrimSpace(legacyValue)
+	startValue = normalizeCommentDateValue(startValue)
+	endValue = normalizeCommentDateValue(endValue)
+	legacyValue = normalizeCommentDateValue(legacyValue)
 
 	if startValue == "" && endValue == "" {
 		if legacyValue != "" {
@@ -118,6 +118,10 @@ func commentFiltersFromRequest(c *gin.Context, user model.User, defaultToday boo
 	}
 
 	return filters, 0, ""
+}
+
+func normalizeCommentDateValue(value string) string {
+	return strings.Trim(strings.TrimSpace(value), `"'`)
 }
 
 func applyCommentFilters(query *gorm.DB, filters CommentFilters) *gorm.DB {

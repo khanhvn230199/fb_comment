@@ -39,6 +39,15 @@ func TestCommentDateRangeFromValues(t *testing.T) {
 			wantEnd:     "2026-08-06",
 		},
 		{
+			name:        "quoted values are normalized",
+			start:       `"2026-08-01"`,
+			end:         `"2026-08-03"`,
+			legacy:      `"2026-08-10"`,
+			wantHasDate: true,
+			wantStart:   "2026-08-01",
+			wantEnd:     "2026-08-03",
+		},
+		{
 			name:        "start only becomes single day",
 			start:       "2026-08-01",
 			wantHasDate: true,
