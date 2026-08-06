@@ -13,7 +13,8 @@
         button, .button { display: inline-block; margin-top: 20px; padding: 10px 14px; border: 0; border-radius: 8px; color: #fff; background: #2563eb; font-weight: 700; cursor: pointer; text-decoration: none; }
         .secondary { background: #6b7280; }
         .error { margin-bottom: 16px; padding: 10px 12px; border-radius: 8px; color: #991b1b; background: #fee2e2; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .field-hint { margin-top: 6px; color: #6b7280; font-size: 12px; line-height: 1.35; }
         .check { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
         .check input { width: auto; }
     </style>
@@ -33,11 +34,10 @@
         <label for="final_url">Final URL</label>
         <input id="final_url" name="final_url" value="{{.link.FinalURL}}">
 
+        <p class="field-hint" style="margin: 12px 0 6px; font-weight: 700; color: #6b7280;">Lịch crawl comment và refresh metrics được quản lý chung ở trang Settings.</p>
+        <div style="margin-bottom: 12px;"><a class="button secondary" href="/settings">Mở Settings</a></div>
+
         <div class="grid">
-            <div>
-                <label for="poll_interval_seconds">Chu kỳ cào (giây)</label>
-                <input id="poll_interval_seconds" name="poll_interval_seconds" type="number" min="3600" value="{{.link.PollIntervalSeconds}}">
-            </div>
             <div>
                 <label for="max_comments">Max comments</label>
                 <input id="max_comments" name="max_comments" type="number" min="1" max="500" value="{{.link.MaxComments}}">

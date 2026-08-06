@@ -16,17 +16,16 @@ import (
 )
 
 type LinkRequest struct {
-	Title               string `json:"title" form:"title"`
-	URL                 string `json:"url" form:"url" binding:"required"`
-	FinalURL            string `json:"final_url" form:"final_url"`
-	UserID              *uint  `json:"user_id" form:"user_id"`
-	Active              *bool  `json:"active" form:"active"`
-	Status              string `json:"status" form:"status"`
-	LastError           string `json:"last_error" form:"last_error"`
-	PollIntervalSeconds int    `json:"poll_interval_seconds" form:"poll_interval_seconds"`
-	MaxComments         int    `json:"max_comments" form:"max_comments"`
-	MaxScrolls          int    `json:"max_scrolls" form:"max_scrolls"`
-	IdlePasses          int    `json:"idle_passes" form:"idle_passes"`
+	Title       string `json:"title" form:"title"`
+	URL         string `json:"url" form:"url" binding:"required"`
+	FinalURL    string `json:"final_url" form:"final_url"`
+	UserID      *uint  `json:"user_id" form:"user_id"`
+	Active      *bool  `json:"active" form:"active"`
+	Status      string `json:"status" form:"status"`
+	LastError   string `json:"last_error" form:"last_error"`
+	MaxComments int    `json:"max_comments" form:"max_comments"`
+	MaxScrolls  int    `json:"max_scrolls" form:"max_scrolls"`
+	IdlePasses  int    `json:"idle_passes" form:"idle_passes"`
 }
 
 type BulkLinkToggleRequest struct {
@@ -105,9 +104,13 @@ func CreateLink(c *gin.Context) {
 	var existing model.Link
 	err := model.DB.Where("url = ?", request.URL).First(&existing).Error
 	if err == nil {
+		settings := model.LoadPollingSettings()
 		setLinkActiveState(&existing, true)
 		applyLinkRequest(&existing, request, true)
 		existing.Normalize()
+		if existing.Active {
+			model.ScheduleAllPolling(&existing, settings, time.Now().UTC())
+		}
 		if err := model.DB.Save(&existing).Error; err != nil {
 			respondLinkError(c, http.StatusInternalServerError, "Không thể kích hoạt lại link")
 			return
@@ -123,6 +126,10 @@ func CreateLink(c *gin.Context) {
 	link := model.NewLink(request.URL)
 	applyLinkRequest(&link, request, true)
 	link.Normalize()
+	if link.Active {
+		settings := model.LoadPollingSettings()
+		model.ScheduleAllPolling(&link, settings, time.Now().UTC())
+	}
 	if err := model.DB.Create(&link).Error; err != nil {
 		respondLinkError(c, http.StatusInternalServerError, "Không thể tạo link")
 		return
@@ -181,8 +188,14 @@ func UpdateLink(c *gin.Context) {
 		request.UserID = link.UserID
 	}
 
+	wasActive := link.Active
+
 	applyLinkRequest(&link, request, current.IsAdmin())
 	link.Normalize()
+	if link.Active && !wasActive {
+		settings := model.LoadPollingSettings()
+		model.ScheduleAllPolling(&link, settings, time.Now().UTC())
+	}
 	if err := model.DB.Save(&link).Error; err != nil {
 		respondLinkError(c, http.StatusInternalServerError, "Không thể cập nhật link")
 		return
@@ -221,6 +234,10 @@ func ToggleLink(c *gin.Context) {
 	}
 
 	setLinkActiveState(&link, !link.Active)
+	if link.Active {
+		settings := model.LoadPollingSettings()
+		model.ScheduleAllPolling(&link, settings, time.Now().UTC())
+	}
 	link.Normalize()
 	if err := model.DB.Save(&link).Error; err != nil {
 		respondLinkError(c, http.StatusInternalServerError, "Không thể đổi trạng thái link")
@@ -249,8 +266,12 @@ func BulkToggleLinks(c *gin.Context) {
 		return
 	}
 
+	settings := model.LoadPollingSettings()
 	for index := range links {
 		setLinkActiveState(&links[index], *request.Active)
+		if *request.Active {
+			model.ScheduleAllPolling(&links[index], settings, time.Now().UTC())
+		}
 		links[index].Normalize()
 		if err := model.DB.Save(&links[index]).Error; err != nil {
 			respondLinkError(c, http.StatusInternalServerError, "Không thể cập nhật trạng thái link")
@@ -339,7 +360,6 @@ func bindLinkRequest(c *gin.Context) (LinkRequest, bool) {
 	request.UserID = parseOptionalUint(c.PostForm("user_id"))
 	request.Status = c.PostForm("status")
 	request.LastError = c.PostForm("last_error")
-	request.PollIntervalSeconds = atoiWithDefault(c.PostForm("poll_interval_seconds"), model.DefaultLinkPollIntervalSeconds)
 	request.MaxComments = atoiWithDefault(c.PostForm("max_comments"), 50)
 	request.MaxScrolls = atoiWithDefault(c.PostForm("max_scrolls"), 20)
 	request.IdlePasses = atoiWithDefault(c.PostForm("idle_passes"), 2)
@@ -370,7 +390,6 @@ func applyLinkRequest(link *model.Link, request LinkRequest, allowOwnerChange bo
 	link.FinalURL = strings.TrimSpace(request.FinalURL)
 	link.Status = strings.TrimSpace(request.Status)
 	link.LastError = strings.TrimSpace(request.LastError)
-	link.PollIntervalSeconds = request.PollIntervalSeconds
 	link.MaxComments = request.MaxComments
 	link.MaxScrolls = request.MaxScrolls
 	link.IdlePasses = request.IdlePasses
@@ -387,7 +406,6 @@ func setLinkActiveState(link *model.Link, active bool) {
 	if active {
 		link.Status = "pending"
 		link.LastError = ""
-		link.NextScrapeAt = time.Now()
 	}
 }
 

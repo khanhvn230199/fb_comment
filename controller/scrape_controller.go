@@ -277,6 +277,8 @@ func findOrCreateScrapeLink(user model.User, input ScrapeLinkInput, maxComments 
 			action = "reactivated"
 		}
 		prepareLinkForScrape(&link, input.Title, maxComments, maxScrolls, idlePasses)
+		settings := model.LoadPollingSettings()
+		model.ScheduleAllPolling(&link, settings, time.Now().UTC())
 		return link, action, model.DB.Save(&link).Error
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -289,6 +291,8 @@ func findOrCreateScrapeLink(user model.User, input ScrapeLinkInput, maxComments 
 		link.UserID = &user.ID
 	}
 	prepareLinkForScrape(&link, input.Title, maxComments, maxScrolls, idlePasses)
+	settings := model.LoadPollingSettings()
+	model.ScheduleAllPolling(&link, settings, time.Now().UTC())
 	if err := model.DB.Create(&link).Error; err != nil {
 		return model.Link{}, "", err
 	}
@@ -441,18 +445,20 @@ func filterNewComments(comments []model.Comment) ([]model.Comment, error) {
 
 func markLinkScraped(link *model.Link, finalURL string) {
 	now := time.Now().UTC()
+	settings := model.LoadPollingSettings()
 	link.FinalURL = strings.TrimSpace(finalURL)
 	link.Status = "scraped"
 	link.LastError = ""
 	link.LastScrapedAt = &now
-	link.NextScrapeAt = now.Add(time.Duration(link.PollIntervalSeconds) * time.Second)
+	model.ScheduleCommentCrawl(link, settings, now)
 	_ = model.DB.Save(link).Error
 }
 
 func markLinkScrapeError(link *model.Link, scrapeErr error) {
 	now := time.Now().UTC()
+	settings := model.LoadPollingSettings()
 	link.Status = "error"
 	link.LastError = scrapeErr.Error()
-	link.NextScrapeAt = now.Add(time.Duration(link.PollIntervalSeconds) * time.Second)
+	model.ScheduleCommentCrawl(link, settings, now)
 	_ = model.DB.Save(link).Error
 }

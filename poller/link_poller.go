@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	defaultPollInterval = 5 * time.Second
+	defaultPollInterval = 1 * time.Second
 	maxPollComments     = 500
 )
 
@@ -75,16 +75,17 @@ func (p *LinkPoller) pollOnce(ctx context.Context) {
 		return
 	}
 
+	settings := model.LoadPollingSettings()
 	p.logger.Printf("link poller: found %d due active link(s)", len(links))
 	for i := range links {
 		if err := ctx.Err(); err != nil {
 			return
 		}
-		p.scrapeLink(ctx, &links[i])
+		p.scrapeLink(ctx, &links[i], settings)
 	}
 }
 
-func (p *LinkPoller) scrapeLink(ctx context.Context, link *model.Link) {
+func (p *LinkPoller) scrapeLink(ctx context.Context, link *model.Link, settings model.PollingSettings) {
 	link.Status = "scraping"
 	link.LastError = ""
 	link.Normalize()
@@ -106,18 +107,18 @@ func (p *LinkPoller) scrapeLink(ctx context.Context, link *model.Link) {
 		Limit:      maxComments,
 	})
 	if err != nil {
-		p.markError(link, err)
+		p.markError(link, settings, err)
 		return
 	}
 
 	comments := mapScrapedComments(link.ID, response.Comments, response.ScrapedAt)
 	inserted, err := p.insertComments(comments)
 	if err != nil {
-		p.markError(link, err)
+		p.markError(link, settings, err)
 		return
 	}
 
-	p.markScraped(link, response.FinalURL)
+	p.markScraped(link, settings, response.FinalURL)
 	if inserted > 0 {
 		p.logger.Printf("link poller: link_id=%d inserted %d new comment(s)", link.ID, inserted)
 	}
@@ -213,23 +214,23 @@ func (p *LinkPoller) filterNewComments(comments []model.Comment) ([]model.Commen
 	return filtered, nil
 }
 
-func (p *LinkPoller) markScraped(link *model.Link, finalURL string) {
+func (p *LinkPoller) markScraped(link *model.Link, settings model.PollingSettings, finalURL string) {
 	now := time.Now().UTC()
 	link.FinalURL = strings.TrimSpace(finalURL)
 	link.Status = "scraped"
 	link.LastError = ""
 	link.LastScrapedAt = &now
-	link.NextScrapeAt = now.Add(time.Duration(link.PollIntervalSeconds) * time.Second)
+	model.ScheduleCommentCrawl(link, settings, now)
 	if err := p.db.Save(link).Error; err != nil {
 		p.logger.Printf("link poller: cannot update scraped link %d: %v", link.ID, err)
 	}
 }
 
-func (p *LinkPoller) markError(link *model.Link, scrapeErr error) {
+func (p *LinkPoller) markError(link *model.Link, settings model.PollingSettings, scrapeErr error) {
 	now := time.Now().UTC()
 	link.Status = "error"
 	link.LastError = scrapeErr.Error()
-	link.NextScrapeAt = now.Add(time.Duration(link.PollIntervalSeconds) * time.Second)
+	model.ScheduleCommentCrawl(link, settings, now)
 	if err := p.db.Save(link).Error; err != nil {
 		p.logger.Printf("link poller: cannot update errored link %d: %v", link.ID, err)
 	}

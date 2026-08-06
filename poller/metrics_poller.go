@@ -3,9 +3,6 @@ package poller
 import (
 	"context"
 	"log"
-	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"fb_comment/model"
@@ -13,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const defaultMetricsInterval = time.Hour
+const defaultMetricsSweepInterval = 1 * time.Second
 
 type LinkMetricsUpdater interface {
 	RefreshLinkMetrics(ctx context.Context, link *model.Link, finalURL string) error
@@ -23,7 +20,7 @@ type MetricsPoller struct {
 	db             *gorm.DB
 	metricsUpdater LinkMetricsUpdater
 	logger         *log.Logger
-	interval       time.Duration
+	sweepInterval  time.Duration
 }
 
 func NewMetricsPoller(db *gorm.DB, metricsUpdater LinkMetricsUpdater, logger *log.Logger) *MetricsPoller {
@@ -34,25 +31,8 @@ func NewMetricsPoller(db *gorm.DB, metricsUpdater LinkMetricsUpdater, logger *lo
 		db:             db,
 		metricsUpdater: metricsUpdater,
 		logger:         logger,
-		interval:       metricsIntervalFromEnv(),
+		sweepInterval:  defaultMetricsSweepInterval,
 	}
-}
-
-func metricsIntervalFromEnv() time.Duration {
-	value := strings.TrimSpace(os.Getenv("METRICS_POLL_INTERVAL"))
-	if value == "" {
-		return defaultMetricsInterval
-	}
-
-	if duration, err := time.ParseDuration(value); err == nil && duration > 0 {
-		return duration
-	}
-
-	if seconds, err := strconv.Atoi(value); err == nil && seconds > 0 {
-		return time.Duration(seconds) * time.Second
-	}
-
-	return defaultMetricsInterval
 }
 
 func (p *MetricsPoller) Start(ctx context.Context) {
@@ -60,11 +40,11 @@ func (p *MetricsPoller) Start(ctx context.Context) {
 		return
 	}
 
-	ticker := time.NewTicker(p.interval)
+	ticker := time.NewTicker(p.sweepInterval)
 	defer ticker.Stop()
 
-	p.logger.Printf("metrics poller started: refreshing link metrics every %s", p.interval)
-	p.refreshOnce(ctx)
+	p.logger.Printf("metrics poller started: sweeping due metrics every %s", p.sweepInterval)
+	p.refreshDueOnce(ctx)
 
 	for {
 		select {
@@ -72,22 +52,26 @@ func (p *MetricsPoller) Start(ctx context.Context) {
 			p.logger.Printf("metrics poller stopped")
 			return
 		case <-ticker.C:
-			p.refreshOnce(ctx)
+			p.refreshDueOnce(ctx)
 		}
 	}
 }
 
-func (p *MetricsPoller) refreshOnce(ctx context.Context) {
+func (p *MetricsPoller) refreshDueOnce(ctx context.Context) {
+	settings := model.LoadPollingSettings()
+	now := time.Now().UTC()
 	var links []model.Link
-	if err := p.db.Where("active = ?", true).Order("id ASC").Find(&links).Error; err != nil {
-		p.logger.Printf("metrics poller: cannot list active links: %v", err)
+	if err := p.db.Where("active = ? AND (metrics_next_refresh_at IS NULL OR metrics_next_refresh_at <= ?)", true, now).
+		Order("metrics_next_refresh_at ASC, id ASC").
+		Find(&links).Error; err != nil {
+		p.logger.Printf("metrics poller: cannot list due links: %v", err)
 		return
 	}
 	if len(links) == 0 {
 		return
 	}
 
-	p.logger.Printf("metrics poller: refreshing metrics for %d active link(s)", len(links))
+	p.logger.Printf("metrics poller: refreshing metrics for %d due link(s)", len(links))
 	for i := range links {
 		if err := ctx.Err(); err != nil {
 			return
@@ -101,5 +85,14 @@ func (p *MetricsPoller) refreshOnce(ctx context.Context) {
 		if err := p.metricsUpdater.RefreshLinkMetrics(ctx, link, finalURL); err != nil {
 			p.logger.Printf("metrics poller: cannot update metrics for link %d: %v", link.ID, err)
 		}
+
+		p.scheduleNextRefresh(link, settings, now)
+	}
+}
+
+func (p *MetricsPoller) scheduleNextRefresh(link *model.Link, settings model.PollingSettings, now time.Time) {
+	model.ScheduleMetricsRefresh(link, settings, now)
+	if err := p.db.Model(&model.Link{}).Where("id = ?", link.ID).Update("metrics_next_refresh_at", link.MetricsNextRefreshAt).Error; err != nil {
+		p.logger.Printf("metrics poller: cannot update next metrics refresh for link %d: %v", link.ID, err)
 	}
 }

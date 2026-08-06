@@ -66,6 +66,9 @@ func RegisterRoutes(router *gin.Engine, commentScraper scraper.CommentScraper) {
 		admin := authenticated.Group("")
 		admin.Use(AdminMiddleware())
 		{
+			admin.GET("/settings", ShowSettings)
+			admin.POST("/settings", UpdateSettings)
+
 			admin.POST("/links", CreateLink)
 			admin.POST("/links/:id/delete", DeleteLink)
 

@@ -57,6 +57,7 @@
             <a href="/links?active=true">Links</a>
             <a href="/users" class="active">Users</a>
             <a href="/resources">Resources</a>
+            {{if eq .currentUser.Role "admin"}}<a href="/settings">Settings</a>{{end}}
             <form method="post" action="/logout">
                 <button type="submit">Logout</button>
             </form>

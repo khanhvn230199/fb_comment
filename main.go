@@ -17,7 +17,10 @@ func main() {
 	model.InitDatabase()
 	model.SeedDefaultAdmin()
 	model.EnsureResourceOwnership()
-	model.EnsureMinimumLinkPollInterval()
+	settings, created := model.EnsurePollingSettings()
+	if created {
+		model.RescheduleActiveLinksFromSettings(settings)
+	}
 
 	commentScraper := scraper.NewAPIScraper(scraper.ConfigFromEnv())
 	if err := commentScraper.Start(); err != nil {

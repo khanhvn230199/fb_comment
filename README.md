@@ -221,12 +221,16 @@ Sidebar `Links` mặc định mở tab `Active`. Bảng link có 2 tab filter c�
 
 Bảng `links` được migrate tự động bằng GORM với các field chính. Màn Links hiển thị thêm tổng comment và tổng like/reaction nếu app lấy được metrics từ Facebook Graph API; nếu chưa lấy được thì hiện `Chưa có dữ liệu` thay vì lấy số comment đã cào làm tổng.
 
+Lịch crawl comment và refresh metrics được quản lý chung tại màn Settings, áp dụng cho toàn bộ link active.
+
+Các field chính:
 
 - `url`, `final_url`
 - `active`, `status`, `last_error`
-- `poll_interval_seconds`, `max_comments`, `max_scrolls`
+- `max_comments`, `max_scrolls`, `idle_passes`
 - `last_scraped_at`, `next_scrape_at`
-- `total_comment_count`, `total_like_count`, `metrics_fetched_at` — tổng comment và tổng like/reaction lấy từ Facebook Graph API khi token có quyền truy cập bài viết
+- `metrics_next_refresh_at`, `metrics_fetched_at`
+- `total_comment_count`, `total_like_count`
 
 Route HTML:
 
@@ -236,6 +240,7 @@ Route HTML:
 - `POST /links/:id` — cập nhật link
 - `POST /links/:id/toggle` — bật/tắt link
 - `POST /links/:id/delete` — xóa link
+- `GET /settings` — cấu hình polling chung cho admin
 
 API JSON có JWT:
 
@@ -243,6 +248,19 @@ API JSON có JWT:
 - `POST /api/links`
 - `PATCH /api/links/:id`
 - `DELETE /api/links/:id`
+
+## Module settings
+
+Màn Settings chỉ dành cho admin:
+
+```text
+http://localhost:8080/settings
+```
+
+Tại đây chỉnh 2 lịch chạy chung cho toàn bộ link active:
+
+- `comment_poll_interval_seconds`
+- `metrics_poll_interval_seconds`
 
 ## Module comment và API cào Facebook
 

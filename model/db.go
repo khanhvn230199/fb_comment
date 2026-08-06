@@ -28,11 +28,57 @@ func InitDatabase() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	if err := database.AutoMigrate(&User{}, &AccessToken{}, &Link{}, &Comment{}, &Resource{}); err != nil {
+	if err := database.AutoMigrate(&User{}, &AccessToken{}, &Link{}, &PollingSettings{}, &Comment{}, &Resource{}); err != nil {
 		log.Fatalf("cannot run database migrations: %v", err)
 	}
 
 	DB = database
+}
+
+func EnsurePollingSettings() (PollingSettings, bool) {
+	settings := NewPollingSettings()
+	var existing PollingSettings
+	if err := DB.First(&existing, 1).Error; err == nil {
+		original := existing
+		existing.Normalize()
+		if existing.CommentPollIntervalSeconds != original.CommentPollIntervalSeconds || existing.MetricsPollIntervalSeconds != original.MetricsPollIntervalSeconds {
+			if err := DB.Save(&existing).Error; err != nil {
+				log.Fatalf("cannot normalize polling settings: %v", err)
+			}
+		}
+		return existing, false
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Fatalf("cannot load polling settings: %v", err)
+	}
+
+	if err := DB.Create(&settings).Error; err != nil {
+		log.Fatalf("cannot create default polling settings: %v", err)
+	}
+
+	return settings, true
+}
+
+func LoadPollingSettings() PollingSettings {
+	settings := NewPollingSettings()
+	var existing PollingSettings
+	if err := DB.First(&existing, 1).Error; err != nil {
+		return settings
+	}
+	existing.Normalize()
+	return existing
+}
+
+func RescheduleActiveLinksFromSettings(settings PollingSettings) {
+	now := time.Now().UTC()
+	commentNextAt := settings.CommentNextAt(now)
+	metricsNextAt := settings.MetricsNextAt(now)
+
+	if err := DB.Model(&Link{}).Where("active = ?", true).Updates(map[string]any{
+		"next_scrape_at":          commentNextAt,
+		"metrics_next_refresh_at": &metricsNextAt,
+	}).Error; err != nil {
+		log.Fatalf("cannot reschedule active links from global polling settings: %v", err)
+	}
 }
 
 func SeedDefaultAdmin() {
@@ -96,14 +142,6 @@ func EnsureResourceOwnership() {
 	}
 	if err := DB.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_resource_user_type_hash ON resources (user_id, type, value_hash)`).Error; err != nil {
 		log.Fatalf("cannot create resource owner unique index: %v", err)
-	}
-}
-
-func EnsureMinimumLinkPollInterval() {
-	if err := DB.Model(&Link{}).
-		Where("poll_interval_seconds < ?", DefaultLinkPollIntervalSeconds).
-		Update("poll_interval_seconds", DefaultLinkPollIntervalSeconds).Error; err != nil {
-		log.Fatalf("cannot normalize link poll interval: %v", err)
 	}
 }
 
